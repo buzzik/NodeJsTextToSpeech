@@ -83,7 +83,7 @@ class TextToSpeech {
             } catch (error) {
                 console.log("\n We get an error!!!111");
                 console.log(error.response.body);
-                setTimeout(() => self.convertFiles(), 5000);
+                setTimeout(() => self.convertFiles(), 15000);
             }
 
         })();
