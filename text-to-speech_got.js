@@ -26,9 +26,9 @@ class TextToSpeech {
     readFiles() {
         var self = this;
         fs.readdir(textStorage, (err, files) => {
+
             files.forEach(file => {
                 let filePath = textStorage + file;
-                // let fileName = path.basename(filePath);
                 let fileName = path.basename(filePath, path.extname(filePath));
                 let fileExt = path.extname(filePath);
                 let contents = fs.readFileSync(filePath, "utf8");
@@ -42,8 +42,12 @@ class TextToSpeech {
                     this.txtArray.push(currentFileObj);
                 }
             });
-            // console.log(this.txtArray);
+            if (this.txtArray.length == 0) {
+                console.log("No *.txt files in source folder. Please put the source text files into /txt/ directory. Exiting...");
+                return;
+            }
             self.convertFiles();
+
         });
     }
     convertFiles() {
@@ -63,26 +67,20 @@ class TextToSpeech {
                 console.log("Downloading...");
                 const response = await got.stream(url)
                     .on('downloadProgress', progress => {
-                        // Report download progress
-
-                        // console.log(progress.transferred);
                         process.stdout.clearLine();
                         process.stdout.cursorTo(0);
                         process.stdout.write(progress.transferred + '  bytes');
                     });
-
-
-                // console.log(response);
                 await pipeline(response, newFile);
                 self.currentFile++;
-                console.log(` done! File ${self.currentFile} of ${self.txtArray.length}`);
+                console.log(`Done. File ${self.currentFile} of ${self.txtArray.length} Converted successfully.`);
                 if (self.currentFile < self.txtArray.length) {
                     self.convertFiles();
                 } else {
                     console.log(`conversion over.`);
                 }
             } catch (error) {
-                console.log("\n We get an error!!!111");
+                console.log("\n We got an error!!!");
                 console.log(error.response.body);
                 setTimeout(() => self.convertFiles(), 15000);
             }
