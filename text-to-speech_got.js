@@ -6,7 +6,7 @@ const { promisify } = require('util');
 const process = require('process');
 const path = require("path");
 const textStorage = "./txt/";
-const soundStorage = "./export/";
+const exportStorage = "./export/";
 
 // const fetch = require("node-fetch");
 const got = require("got");
@@ -14,7 +14,7 @@ const pipeline = promisify(stream.pipeline);
 class TextToSpeech {
     constructor() {
         this.txtFolder = textStorage;
-        this.exportFolder = soundStorage;
+        this.exportFolder = exportStorage;
         this.exportExt = ".mp3";
         this.txtArray = [];
         this.currentFile = 0;
@@ -38,7 +38,9 @@ class TextToSpeech {
                     ext: fileExt,
                     content: contents
                 };
-                this.txtArray.push(currentFileObj);
+                if (currentFileObj.ext == ".txt") {
+                    this.txtArray.push(currentFileObj);
+                }
             });
             // console.log(this.txtArray);
             self.convertFiles();
