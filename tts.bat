@@ -1,2 +1,0 @@
-node tts.js
-pause
