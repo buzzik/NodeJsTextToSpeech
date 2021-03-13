@@ -1,19 +1,24 @@
 const fs = require('fs');
 const process = require('process');
 const FileReader = require('./src/file-reader.js');
-const config = require('./config.js');
+const { promisify } = require('util');
+const readFile = promisify(fs.readFile);
 const { parseTTS } = require('./src/text-to-speech.js');
 const { getCreds } = require('json-credentials');
 const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const reader = new FileReader();
+const pressToExit = require('./src/exit.js');
+const configFile = 'config.json';
 
 (async () => {
+  const configData = await readFile(configFile);
+  const config = JSON.parse(configData);
   const txtArr = await reader.readDir(config.textDir, 'txt');
   const credsData = await getCreds(['key']);
   const textToSpeech = new TextToSpeechV1({
     authenticator: new IamAuthenticator({ apikey: credsData.key }),
-    serviceUrl: 'https://api.eu-gb.text-to-speech.watson.cloud.ibm.com/instances/ba27ef29-55aa-4a36-bc6e-13c55c530442'
+    serviceUrl: config.serviceUrl
   });
   const params = {
     text: '',
@@ -27,7 +32,7 @@ const reader = new FileReader();
   let iterator = 0;
   for (const txtFileObj of txtArr) {
     params.text = txtFileObj.data;
-    const resultFilePath = config.exportDir + txtFileObj.name + config.extension;
+    const resultFilePath = `${config.exportDir}${txtFileObj.name}.${config.extension}`;
     iterator++;
     console.log(`Downloading ${iterator} of ${txtArr.length} : ${txtFileObj.name}`);
     if (config.mode === 'parser') {
@@ -52,12 +57,5 @@ const reader = new FileReader();
       }
     }
   }
-  exit();
+  pressToExit('Conversion done.\nPress any key to exit');
 })();
-
-function exit() {
-  console.log('Conversion done.\nPress any key to exit');
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
-  process.stdin.on('data', process.exit.bind(process, 0));
-}
