@@ -160,7 +160,7 @@ $RECYCLE.BIN/
 #exclude working files
 /txt/*
 /export/*
-
+credentials.json
 # exception to the rule
 !txt/.gitkeep 
 !export/.gitkeep 

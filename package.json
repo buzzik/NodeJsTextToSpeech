@@ -5,8 +5,13 @@
     "main": "tts.js",
     "bin": "tts.js",
     "pkg": {
-        "assets": ["node_modules/**/*", "src/**/*"],
-        "targets": ["node12-win-x64"]
+        "assets": [
+            "node_modules/**/*",
+            "src/**/*"
+        ],
+        "targets": [
+            "node12-win-x64"
+        ]
     },
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,6 +22,8 @@
     "dependencies": {
         "fs": "0.0.1-security",
         "got": "^11.3.0",
+        "ibm-watson": "^6.0.3",
+        "json-credentials": "^1.0.1",
         "path": "^0.12.7",
         "progress": "^2.0.3",
         "request": "^2.88.0",
