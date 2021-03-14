@@ -5,7 +5,7 @@ const { promisify } = require('util');
 const pipeline = promisify(stream.pipeline);
 const got = require('got');
 
-async function parseTTS(text, fiePath, voice, extension) {
+async function ttsParse(text, fiePath, voice, extension) {
   const newFile = fs.createWriteStream(fiePath);
   const url = `https://text-to-speech-demo.ng.bluemix.net/api/v3/synthesize?text=${text}&voice=${voice}&ssmlLabel=SSML&download=true&accept=audio%2F${extension}`;
   const response = await got.stream(url).on('downloadProgress', (progress) => {
@@ -17,4 +17,4 @@ async function parseTTS(text, fiePath, voice, extension) {
   console.log(' Done.');
   return true;
 }
-module.exports = { parseTTS };
+module.exports = { ttsParse };
