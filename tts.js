@@ -1,5 +1,4 @@
 const fs = require('fs');
-const process = require('process');
 const FileReader = require('./src/file-reader.js');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
@@ -8,21 +7,24 @@ const { getCreds } = require('json-credentials');
 const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const reader = new FileReader();
-const pressToExit = require('./src/exit.js');
+const pressToExit = require('./src/press-to-exit.js');
 const configFile = 'config.json';
 
 (async () => {
   const configData = await readFile(configFile);
   const config = JSON.parse(configData);
   const txtArr = await reader.readDir(config.textDir, 'txt');
-  const credsData = await getCreds(['key']);
-  const textToSpeech = new TextToSpeechV1({
-    authenticator: new IamAuthenticator({ apikey: credsData.key }),
-    serviceUrl: config.serviceUrl
-  });
+  if (config.mode === 'api') {
+    console.log(config.mode);
+    const credsData = await getCreds(['key']);
+    var textToSpeech = new TextToSpeechV1({
+      authenticator: new IamAuthenticator({ apikey: credsData.key }),
+      serviceUrl: config.serviceUrl
+    });
+  }
   const params = {
     text: '',
-    voice: config.voice, // Optional voice
+    voice: config.voice,
     accept: `audio/${config.extension}`
   };
   if (txtArr.length === 0) {
