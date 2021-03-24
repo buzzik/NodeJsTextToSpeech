@@ -1,6 +1,5 @@
 const fs = require('fs');
-const FileReader = require('./src/file-reader.js');
-const reader = new FileReader();
+const getDirFiles = require('./src/get-dir-files.js');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
 const { ttsParse } = require('./src/text-to-speech.js');
@@ -19,7 +18,7 @@ let ttsAPI, credentials, txtArr;
     voice: config.voice,
     accept: `audio/${config.extension}`
   };
-  txtArr = await reader.readDir(config.textDir, 'txt');
+  txtArr = await getDirFiles(config.textDir, 'txt');
   if (txtArr.length === 0) {
     return pressToExit('No *.txt files in source folder. Please put the source text files into /txt/ directory. \n Press any key to exit...');
   }
