@@ -1,38 +1,36 @@
 class Throttler {
-  constructor(ms, sameTimeLimit) {
+  constructor(ms, limit) {
     this.ms = ms;
     this.queue = [];
     this.timer;
     this.isDone = false;
-    this.sameTimeCounter = 0;
-    this.sameTimeLimit = sameTimeLimit || false;
+    this.limitCounter = 0;
+    this.limit = limit || false;
   }
   add(callback) {
     this.queue.push(callback);
     this.resetTimer();
   }
-  remove() {}
-  do() {
+  proceed() {
     if (this.queue.length === 0) {
       this.isDone = true;
       return;
     }
-    if (this.sameTimeCounter < this.sameTimeLimit || !this.sameTimeLimit) {
-      const func = this.queue.shift();
-      func();
-      this.sameTimeCounter++;
+    if (this.limitCounter < this.limit || !this.limit) {
+      const callback = this.queue.shift();
+      callback();
+      this.limitCounter++;
     }
-
     this.resetTimer();
   }
   resetTimer() {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
-      this.do();
+      this.proceed();
     }, this.ms);
   }
   checkout() {
-    this.sameTimeCounter--;
+    this.limitCounter--;
   }
 }
 module.exports = Throttler;
