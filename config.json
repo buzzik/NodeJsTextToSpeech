@@ -1,9 +1,10 @@
 {
-  "mode": "parser",
+  "mode": "api",
   "extension": "mp3",
   "voice": "en-US_LisaV3Voice",
   "textDir": "./txt/",
   "exportDir": "./export/",
   "serviceUrl": "https://api.eu-gb.text-to-speech.watson.cloud.ibm.com/instances/ba27ef29-55aa-4a36-bc6e-13c55c530442",
-  "delay": 600
+  "delay": 500,
+  "sameTimeLimit": 10
 }

@@ -1,6 +1,4 @@
 const fs = require('fs');
-const fsPromises = fs.promises;
-const got = require('got');
 const getDirFiles = require('./src/get-dir-files.js');
 const pressToExit = require('./src/press-to-exit.js');
 const { promisify } = require('util');
@@ -9,18 +7,16 @@ const TextToSpeech = require('./src/TextToSpeech.js');
 const Throttler = require('./src/Throttler.js');
 const stream = require('stream');
 const pipeline = promisify(stream.pipeline);
-const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
-const { IamAuthenticator } = require('ibm-watson/auth');
 const startTime = new Date();
 const configFile = 'config.json';
-let iterator = 0;
 let counter = 0;
-let ttsAPI, credentials, txtArr;
+const errArr = [];
+let txtArr;
 
 (async () => {
   const configData = await readFile(configFile);
   const config = JSON.parse(configData);
-  const queue = new Throttler(config.delay);
+  const queue = new Throttler(config.delay, config.sameTimeLimit);
   config.accept = `audio/${config.extension}`;
 
   txtArr = await getDirFiles(config.textDir, 'txt');
@@ -29,23 +25,21 @@ let ttsAPI, credentials, txtArr;
   }
   const tts = new TextToSpeech(config);
   await tts.init();
-
+  console.log('Synthetize started.');
   for (const txt of txtArr) {
     config.text = txt.data;
-    let resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
-    iterator++;
-    // console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
-    let params = Object.assign({}, config);
-    let filePath = JSON.parse(JSON.stringify(resultFilePath));
+    const resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
+    const params = Object.assign({}, config);
+    const filePath = JSON.parse(JSON.stringify(resultFilePath));
     queue.add(() => {
       tts
         .synthesize(params)
         .then((stream) => {
-          stream.on('downloadProgress', (progress) => {
-            process.stdout.clearLine();
-            process.stdout.cursorTo(0);
-            process.stdout.write(progress.transferred + '  bytes ');
-          });
+          // stream.on('downloadProgress', (progress) => {
+          //   process.stdout.clearLine();
+          //   process.stdout.cursorTo(0);
+          //   process.stdout.write(progress.transferred + '  bytes ');
+          // });
           // return pipeline(stream, newFile);
           saveStream(stream, filePath);
         })
@@ -59,13 +53,15 @@ let ttsAPI, credentials, txtArr;
     pipeline(stream, newFile)
       .then((res) => {
         counter++;
+        queue.checkout();
         console.log(`${counter} of ${txtArr.length} converted. ${filename}`);
-        if (counter >= txtArr.length) {
-          let executionTime = new Date() - startTime;
-          pressToExit(`Conversion done in ${executionTime} ms.\nPress any key to exit`);
+        if (counter + errArr.length >= txtArr.length) {
+          const executionTime = new Date() - startTime;
+          pressToExit(`Conversion done in ${executionTime} ms. With ${errArr.length} errors.\n ${errArr.length ? 'Files with errors\n' + errArr.join('\n') : ''}\nPress any key to exit`);
         }
       })
       .catch((err) => {
+        errArr.push(filename);
         console.log(err);
       });
   }

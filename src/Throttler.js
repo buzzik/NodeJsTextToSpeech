@@ -1,9 +1,11 @@
 class Throttler {
-  constructor(ms) {
+  constructor(ms, sameTimeLimit) {
     this.ms = ms;
     this.queue = [];
     this.timer;
     this.isDone = false;
+    this.sameTimeCounter = 0;
+    this.sameTimeLimit = sameTimeLimit || false;
   }
   add(callback) {
     this.queue.push(callback);
@@ -11,14 +13,16 @@ class Throttler {
   }
   remove() {}
   do() {
-    // console.log(this.queue.length);
     if (this.queue.length === 0) {
       this.isDone = true;
       return;
     }
-    let func = this.queue.shift();
-    // console.log(func);
-    func();
+    if (this.sameTimeCounter < this.sameTimeLimit || !this.sameTimeLimit) {
+      const func = this.queue.shift();
+      func();
+      this.sameTimeCounter++;
+    }
+
     this.resetTimer();
   }
   resetTimer() {
@@ -26,6 +30,9 @@ class Throttler {
     this.timer = setTimeout(() => {
       this.do();
     }, this.ms);
+  }
+  checkout() {
+    this.sameTimeCounter--;
   }
 }
 module.exports = Throttler;

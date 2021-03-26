@@ -2,7 +2,6 @@ const TTSParser = require('./TTSParser.js');
 const TTSApi = require('ibm-watson/text-to-speech/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const { getCreds } = require('json-credentials');
-const fs = require('fs');
 
 class TextToSpeech {
   constructor(config) {
