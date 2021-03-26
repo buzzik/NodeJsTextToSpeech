@@ -28,20 +28,34 @@ let ttsAPI, credentials, txtArr;
 
   for (const txt of txtArr) {
     config.text = txt.data;
-    config.resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
-    let audioData;
+    let resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
     iterator++;
     console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
     tts
       .synthesize(config)
-      .then((res) => {
-        // console.log(res);
-        // return pipeline(res, config.resultFilePath);
-        // return fsPromises.writeFile(config.resultFilePath, res);
+      .then((stream) => {
+        stream.on('downloadProgress', (progress) => {
+          process.stdout.clearLine();
+          process.stdout.cursorTo(0);
+          process.stdout.write(progress.transferred + '  bytes ');
+        });
+        // return pipeline(stream, newFile);
+        saveStream(stream, iterator, txtArr.length, resultFilePath);
       })
       .catch((err) => {
         console.log(err);
       });
   }
-  pressToExit('Conversion done.\nPress any key to exit');
+  function saveStream(stream, iterator, total, filename) {
+    const newFile = fs.createWriteStream(filename);
+    const counter = iterator;
+    pipeline(stream, newFile)
+      .then((res) => {
+        console.log(`${counter} of ${txtArr.length} saved. ${filename}`);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  }
+  // pressToExit('Conversion done.\nPress any key to exit');
 })();

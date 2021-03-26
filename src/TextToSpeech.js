@@ -29,21 +29,14 @@ class TextToSpeech {
   }
   async synthesize(params) {
     if (this.mode === 'api') {
-      try {
-        const result = await this.tts.synthesize(params);
-        let audio = result.result;
-        console.log(audio);
-        if (params.extension === 'wav') {
-          audio = await this.tts.repairWavHeaderStream(audio);
-        }
-        fs.writeFileSync(params.resultFilePath, audio);
-
-        console.log(`${params.resultFilePath} saved.`);
-      } catch (error) {
-        console.log(error);
-        return;
-      }
-      return audio;
+      const result = await this.tts.synthesize(params);
+      // let audio = result.result;
+      // console.log(audio);
+      // if (params.extension === 'wav') {
+      //   audio = await this.tts.repairWavHeaderStream(audio);
+      // }
+      // console.log(`${params.resultFilePath} saved.`);
+      return result.result;
     } else {
       return this.tts.synthesize(params);
     }
