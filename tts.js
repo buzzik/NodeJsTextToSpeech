@@ -1,9 +1,12 @@
 const fs = require('fs');
+const fsPromises = fs.promises;
+const got = require('got');
 const getDirFiles = require('./src/get-dir-files.js');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
-const { ttsParse } = require('./src/text-to-speech.js');
-const { getCreds } = require('json-credentials');
+const TextToSpeech = require('./src/TextToSpeech.js');
+const stream = require('stream');
+const pipeline = promisify(stream.pipeline);
 const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
 const pressToExit = require('./src/press-to-exit.js');
@@ -14,48 +17,31 @@ let ttsAPI, credentials, txtArr;
 (async () => {
   const configData = await readFile(configFile);
   const config = JSON.parse(configData);
-  const params = {
-    voice: config.voice,
-    accept: `audio/${config.extension}`
-  };
+  config.accept = `audio/${config.extension}`;
+
   txtArr = await getDirFiles(config.textDir, 'txt');
   if (txtArr.length === 0) {
     return pressToExit('No *.txt files in source folder. Please put the source text files into /txt/ directory. \n Press any key to exit...');
   }
-  if (config.mode === 'api') {
-    credentials = await getCreds(['key']);
-    ttsAPI = new TextToSpeechV1({
-      authenticator: new IamAuthenticator({ apikey: credentials.key }),
-      serviceUrl: config.serviceUrl
-    });
-  }
+  const tts = new TextToSpeech(config);
+  await tts.init();
 
-  for (const txtFileObj of txtArr) {
-    params.text = txtFileObj.data;
-    const resultFilePath = `${config.exportDir}${txtFileObj.name}.${config.extension}`;
+  for (const txt of txtArr) {
+    config.text = txt.data;
+    config.resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
+    let audioData;
     iterator++;
-    console.log(`Downloading ${iterator} of ${txtArr.length} : ${txtFileObj.name}`);
-    if (config.mode === 'parser') {
-      try {
-        await ttsParse(params.text, resultFilePath, config.voice, config.extension);
-      } catch (err) {
+    console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
+    tts
+      .synthesize(config)
+      .then((res) => {
+        // console.log(res);
+        // return pipeline(res, config.resultFilePath);
+        // return fsPromises.writeFile(config.resultFilePath, res);
+      })
+      .catch((err) => {
         console.log(err);
-      }
-      params.text = txtFileObj.data;
-    } else {
-      try {
-        const result = await ttsAPI.synthesize(params);
-        let audio = result.result;
-        if (config.extension === 'wav') {
-          audio = await ttsAPI.repairWavHeaderStream(audio);
-        }
-        fs.writeFileSync(resultFilePath, audio);
-        console.log(`${resultFilePath} saved.`);
-      } catch (error) {
-        console.log(error);
-        return;
-      }
-    }
+      });
   }
   pressToExit('Conversion done.\nPress any key to exit');
 })();
