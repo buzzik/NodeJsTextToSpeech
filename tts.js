@@ -32,7 +32,7 @@ let ttsAPI, credentials, txtArr;
     config.text = txt.data;
     let resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
     iterator++;
-    console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
+    // console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
     let params = Object.assign({}, config);
     let current = JSON.parse(JSON.stringify(iterator));
     let filePath = JSON.parse(JSON.stringify(resultFilePath));
@@ -58,7 +58,7 @@ let ttsAPI, credentials, txtArr;
     const counter = iterator;
     pipeline(stream, newFile)
       .then((res) => {
-        console.log(`${counter} of ${txtArr.length} saved. ${filename}`);
+        console.log(`${counter} of ${txtArr.length} converted. ${filename}`);
       })
       .catch((err) => {
         console.log(err);

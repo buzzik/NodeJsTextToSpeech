@@ -14,7 +14,6 @@ class Throttler {
     // console.log(this.queue.length);
     if (this.queue.length === 0) {
       this.isDone = true;
-      this.done();
       return;
     }
     let func = this.queue.shift();
