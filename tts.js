@@ -5,11 +5,12 @@ const getDirFiles = require('./src/get-dir-files.js');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
 const TextToSpeech = require('./src/TextToSpeech.js');
+const Throttler = require('./src/Throttler.js');
 const stream = require('stream');
 const pipeline = promisify(stream.pipeline);
 const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
 const { IamAuthenticator } = require('ibm-watson/auth');
-const pressToExit = require('./src/press-to-exit.js');
+
 const configFile = 'config.json';
 let iterator = 0;
 let ttsAPI, credentials, txtArr;
@@ -17,6 +18,7 @@ let ttsAPI, credentials, txtArr;
 (async () => {
   const configData = await readFile(configFile);
   const config = JSON.parse(configData);
+  const queue = new Throttler(config.delay);
   config.accept = `audio/${config.extension}`;
 
   txtArr = await getDirFiles(config.textDir, 'txt');
@@ -31,20 +33,25 @@ let ttsAPI, credentials, txtArr;
     let resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
     iterator++;
     console.log(`Downloading ${iterator} of ${txtArr.length} : ${txt.name}`);
-    tts
-      .synthesize(config)
-      .then((stream) => {
-        stream.on('downloadProgress', (progress) => {
-          process.stdout.clearLine();
-          process.stdout.cursorTo(0);
-          process.stdout.write(progress.transferred + '  bytes ');
+    let params = Object.assign({}, config);
+    let current = JSON.parse(JSON.stringify(iterator));
+    let filePath = JSON.parse(JSON.stringify(resultFilePath));
+    queue.add(() => {
+      tts
+        .synthesize(params)
+        .then((stream) => {
+          stream.on('downloadProgress', (progress) => {
+            process.stdout.clearLine();
+            process.stdout.cursorTo(0);
+            process.stdout.write(progress.transferred + '  bytes ');
+          });
+          // return pipeline(stream, newFile);
+          saveStream(stream, current, txtArr.length, filePath);
+        })
+        .catch((err) => {
+          console.log(err);
         });
-        // return pipeline(stream, newFile);
-        saveStream(stream, iterator, txtArr.length, resultFilePath);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    });
   }
   function saveStream(stream, iterator, total, filename) {
     const newFile = fs.createWriteStream(filename);
