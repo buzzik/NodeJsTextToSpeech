@@ -1,70 +1,68 @@
 const fs = require('fs');
 const stream = require('stream');
 const getDirFiles = require('./src/get-dir-files.js');
+const pressToExit = require('./src/press-to-exit.js');
 const { promisify } = require('util');
 const readFile = promisify(fs.readFile);
-const { ttsParse } = require('./src/text-to-speech.js');
-const { getCreds } = require('json-credentials');
-const TextToSpeechV1 = require('ibm-watson/text-to-speech/v1');
-const { IamAuthenticator } = require('ibm-watson/auth');
-const pressToExit = require('./src/press-to-exit.js');
+const TextToSpeech = require('./src/TextToSpeech.js');
+const Throttler = require('./src/Throttler.js');
 const pipeline = promisify(stream.pipeline);
-const got = require('got');
+const startTime = new Date();
 const configFile = 'config.json';
-let iterator = 0;
-let ttsAPI, credentials, txtArr;
+let counter = 0;
+const errArr = [];
+let txtArr;
 
 (async () => {
   const configData = await readFile(configFile);
   const config = JSON.parse(configData);
-  const params = {
-    voice: config.voice,
-    accept: `audio/${config.extension}`
-  };
+  const queue = new Throttler(config.delay, config.sameTimeLimit);
+  config.accept = `audio/${config.extension}`;
+
   txtArr = await getDirFiles(config.textDir, 'txt');
   if (txtArr.length === 0) {
     return pressToExit('No *.txt files in source folder. Please put the source text files into /txt/ directory. \n Press any key to exit...');
   }
-  if (config.mode === 'api') {
-    credentials = await getCreds(['key']);
-    ttsAPI = new TextToSpeechV1({
-      authenticator: new IamAuthenticator({ apikey: credentials.key }),
-      serviceUrl: config.serviceUrl
+  const tts = new TextToSpeech(config);
+  await tts.init();
+  console.log('Synthetize started.');
+  for (const txt of txtArr) {
+    config.text = txt.data;
+    const resultFilePath = `${config.exportDir}${txt.name}.${config.extension}`;
+    const params = Object.assign({}, config);
+    const filePath = JSON.parse(JSON.stringify(resultFilePath));
+    queue.add(() => {
+      tts
+        .synthesize(params)
+        .then((stream) => {
+          // stream.on('downloadProgress', (progress) => {
+          //   process.stdout.clearLine();
+          //   process.stdout.cursorTo(0);
+          //   process.stdout.write(progress.transferred + '  bytes ');
+          // });
+          // return pipeline(stream, newFile);
+          saveStream(stream, filePath);
+        })
+        .catch((err) => {
+          console.log(err);
+        });
     });
   }
-
-  for (const txtFileObj of txtArr) {
-    params.text = txtFileObj.data;
-    const resultFilePath = `${config.exportDir}${txtFileObj.name}.${config.extension}`;
-    iterator++;
-    console.log(`Downloading ${iterator} of ${txtArr.length} : ${txtFileObj.name}`);
-    if (config.mode === 'parser') {
-      try {
-        await ttsParse(params.text, resultFilePath, config.voice, config.extension);
-      } catch (err) {
-        console.log(err);
-      }
-      params.text = txtFileObj.data;
-    } else {
-      try {
-        const result = await ttsAPI.synthesize(params);
-        let audio = result.result;
-        if (config.extension === 'wav' && config.mode === 'api') {
-          audio = await ttsAPI.repairWavHeaderStream(audio);
-          fs.writeFileSync(resultFilePath, audio);
-        } else {
-          let newFile = fs.createWriteStream(resultFilePath);
-          await pipeline(audio, newFile);
-          // audio.pipe(writeableStream);
+  function saveStream(stream, filename) {
+    const newFile = fs.createWriteStream(filename);
+    pipeline(stream, newFile)
+      .then((res) => {
+        counter++;
+        queue.checkout();
+        console.log(`${counter} of ${txtArr.length} converted. ${filename}`);
+        if (counter + errArr.length >= txtArr.length) {
+          const executionTime = new Date() - startTime;
+          pressToExit(`Conversion done in ${executionTime} ms. With ${errArr.length} errors.\n ${errArr.length ? 'Files with errors\n' + errArr.join('\n') : ''}\nPress any key to exit`);
         }
-
-        //
-        // console.log(`${resultFilePath} saved.`);
-      } catch (error) {
-        console.log(error);
-        return;
-      }
-    }
+      })
+      .catch((err) => {
+        errArr.push(filename);
+        console.log(err);
+      });
   }
-  pressToExit('Conversion done.\nPress any key to exit');
 })();
