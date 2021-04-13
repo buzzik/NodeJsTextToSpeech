@@ -5,6 +5,6 @@
   "textDir": "./txt/",
   "exportDir": "./export/",
   "serviceUrl": "https://api.eu-gb.text-to-speech.watson.cloud.ibm.com/instances/ba27ef29-55aa-4a36-bc6e-13c55c530442",
-  "delay": 500,
-  "sameTimeLimit": 10
+  "delay": 1000,
+  "sameTimeLimit": 1
 }
